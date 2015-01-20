@@ -3,7 +3,7 @@
 # Jonathan Foote
 # jmfoote@loyola.edu
 
-import subprocess, re, sys, os, json, difflib, shutil
+import subprocess, re, sys, os, json, difflib, shutil, filecmp
 
 
 '''
@@ -152,8 +152,21 @@ def shadow_controlled_files(src_repo_path):
     if changed:
         commit(dst, get_commit_id(src))
 
-def shadow_buffer(filepath, buf):
-    pass
+def shadow_file(filepath, buffer_path):
+    '''
+    Diffs contents (respectively) of filepath and buffer_path; if the buffer
+    contents are different, the file corresponding to filepath is copied from
+    the enclosing repo to the shadow repo and committed to the shadow repo.
+    '''
+    if not filecmp.cmp(filepath, buffer_path, shallow=False):
+        rel = get_filepath_relative_to_repo(filepath)
+        shadow_repo = get_shadow_repo_path(filepath)
+        dst = os.path.join(shadow_repo, rel)
+                
+        shutil.copy(buffer_path, dst)
+    
+        subprocess.check_call(["git", "add", rel], cwd=shadow_repo)
+        subprocess.check_call(["git", "commit", "-m", "'file_modified'"], cwd=shadow_repo)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -181,11 +194,11 @@ if __name__ == "__main__":
         add_hooks(cwd)
     elif sys.argv[1] == "remove-hooks": 
         remove_hooks(cwd)
-    elif sys.argv[1] == "shadow-buf":
+    elif sys.argv[1] == "shadow-file":
         import pickle
         filepath = sys.argv[2]
-        buf = pickle.loads(sys.argv[3])
-        shadow_buffer(filepath, buf)
+        buffer_path = sys.argv[3]
+        shadow_file(filepath, buffer_path)
     else:
         # run git command in mirror directory of shadow repo
         pass

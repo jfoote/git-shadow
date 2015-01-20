@@ -13,7 +13,12 @@ def rm_r(path):
     elif os.path.exists(path):
         os.remove(path)
 
+def num_commits(repo_dir):
+    out = subprocess.check_output(["git", "log", "--format=%H"], cwd=repo_dir)
+    return len(out.strip().splitlines())
+
 class Test_git_shadow(TestCase):
+
     def setUp(self):
         # create dummy repo for testing
         self.repo_dir = os.path.realpath(tempfile.mkdtemp())
@@ -114,11 +119,40 @@ class Test_git_shadow(TestCase):
         self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobar")))
         self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobaz", "foomanchu")))
 
-
-'''
     def test_activate(self):
         subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
 
         # verify git repo was initialized
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
-'''
+
+    def test_shadow_file(self):
+        # add some files to a test repo
+        test_filepath = os.path.join(self.repo_dir, "foobar")
+        open(test_filepath, "wt").write("some file contents")
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
+
+        os.mkdir(os.path.join(self.repo_dir, "foobaz"))
+        test_filepath = os.path.join(self.repo_dir, "foobaz", "foomanchu")
+        open(test_filepath, "wt").write("some other file contents")
+
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
+        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir)
+        # create shadow
+        git_shadow.create_shadow_repo(self.repo_dir)
+        git_shadow.shadow_controlled_files(self.repo_dir)
+
+        # baseline number of commits in shadow repo
+        shadow_repo_path = git_shadow.get_shadow_repo_path(self.repo_dir)
+        commits = num_commits(shadow_repo_path)
+        print "%d commits" % commits
+
+        # verify adding an unchanged file doesn't result in a commit to the shadow repo
+        git_shadow.shadow_file(test_filepath, test_filepath)
+        self.assertEqual(commits, num_commits(shadow_repo_path))
+
+        # verify adding a changed file *does* result in a commit
+        with tempfile.NamedTemporaryFile() as tf:
+            tf.write("new contents..\nare here!")
+            tf.flush()
+            git_shadow.shadow_file(test_filepath, tf.name)
+            self.assertEqual(commits+1, num_commits(shadow_repo_path))
