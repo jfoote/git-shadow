@@ -5,6 +5,38 @@
 
 import subprocess, re, sys, os, json, difflib
 
+
+'''
+Git utility functions
+'''
+
+def get_repo_path(path):
+    if not os.path.isdir(path):
+        path = os.path.dirname(path)
+    return subprocess.check_output(["git", "rev-parse", "--show-toplevel"], 
+            cwd=path).strip()
+
+def get_branch(path):
+    if not os.path.isdir(path):
+        path = os.path.dirname(path)
+    text = subprocess.check_output(["git", "branch"], cwd=path)
+    line = [l for l in text.splitlines() if "*" in l][0]
+    return line.strip("* ")
+
+def get_filepath_relative_to_repo(filepath):
+    dirpath, filename = os.path.split(filepath)
+    repo_rel_dirpath = subprocess.check_output(["git", "rev-parse", "--show-prefix"], cwd=dirpath).strip()
+    return os.path.join(repo_rel_dirpath, filename)
+
+def commit(src, dst):
+    commit_id = subprocess.check_output(["git", "log", '--format=%H', "-n", "1"], cwd=src).strip()
+    subprocess.check_call(["git", "commit", "-m" "'%s'" % commit_id], cwd=dst)
+
+
+'''
+Shadow repo management functions
+'''
+
 def add_shadow_repo(cwd="."):
     '''
     Hack that adds shadow repo to enclosing git repo. Run as a pre-commit hook,
@@ -56,15 +88,6 @@ def create_shadow_repo(cwd=".", force=True):
     # make shadow repo
     subprocess.check_output(["git", "init", shadow_repo_path], cwd=cwd)
 
-def get_repo_path(path):
-    '''
-    Returns toplevel path for repo containing 'path'
-    '''
-    if not os.path.isdir(path):
-        path = os.path.dirname(path)
-    return subprocess.check_output(["git", "rev-parse", "--show-toplevel"], 
-            cwd=path).strip()
-
 def add_hooks(cwd):
     '''
     Create (or add to) git hook files that call git-shadow. 
@@ -93,6 +116,31 @@ def remove_hooks(cwd):
             os.remove(filepath)
         else:
             open(filepath, "wt").write("\n".join(lines))
+
+
+'''
+File shadowing functions
+'''
+
+def shadow_controlled_files(src, branch, dst):
+    rel_fps = subprocess.check_output(["git", "ls-tree", "-r", branch, "--name-only"], cwd=src).strip().splitlines()
+    changed = False
+    for rel_fp in rel_fps:
+        dst_filepath = os.path.join(dst, rel_fp)
+        dst_dirpath, dst_filename = os.path.split(dst_filepath)
+        src_filepath = os.path.join(src, rel_fp)
+        try:
+            if not os.path.exists(dst_dirpath):
+                subprocess.check_call(["mkdir", "-p", dst_dirpath], cwd=src)
+            shutil.copy(src_filepath, dst_filepath)
+            subprocess.check_call(["git", "add", dst_filepath], cwd=dst)
+            log("added", dst_filepath)
+            changed = True
+        except Exception as e:
+            log("error copying %s to %s, probably uncommitted 'git mv'" % (src_filepath, dst_filepath))
+            logging.exception(e)
+    if changed:
+        commit(src, dst)
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
