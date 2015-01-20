@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from unittest import TestCase
-import subprocess, os, shutil
+import subprocess, os, shutil, tempfile
 
 # Load git-shadow as a module for functional unit tests. Le Hack. Sacrebleu!!1
 import imp
@@ -16,8 +16,7 @@ def rm_r(path):
 class Test_git_shadow(TestCase):
     def setUp(self):
         # create dummy repo for testing
-        import tempfile
-        self.repo_dir = tempfile.mkdtemp()
+        self.repo_dir = os.path.realpath(tempfile.mkdtemp())
         subprocess.check_call(["git", "init", self.repo_dir])
 
         # add cwd to path to support execution of "git-shadow" in tests
@@ -27,15 +26,48 @@ class Test_git_shadow(TestCase):
     def tearDown(self):
         rm_r(self.repo_dir)
 
-    def test_activate(self):
-        subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
+    def test_get_shadow_repo_path(self):
+        '''
+        Verify the shadow repo path is constructed properly and that an 
+        Exception is raised if the func is called outside a git repo.
+        '''
+        p = git_shadow.get_shadow_repo_path(self.repo_dir)
 
-        # verify git repo was initialized
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
+        self.assertEqual(git_shadow.get_shadow_repo_path(self.repo_dir),
+                os.path.join(self.repo_dir, ".shadow"))
+
+        tdir = tempfile.mkdtemp()
+        try:
+            with self.assertRaises(subprocess.CalledProcessError):
+                git_shadow.get_shadow_repo_path(tdir)
+        finally:
+            rm_r(tdir)
 
     def test_create_shadow_repo(self):
+        '''
+        Verify the function creates repos properly and throws an Exception if
+        the repo already exists/force is False
+        '''
         git_shadow.create_shadow_repo(cwd=self.repo_dir, force=False)
-        # TODO: stopped here
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow")))
+
+        with self.assertRaises(RuntimeError):
+            git_shadow.create_shadow_repo(cwd=self.repo_dir, force=False)
+
+        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=True)
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow")))
+
+    def test_delete_shadow_repo(self):
+        '''
+        Verify the function deletes a shadow repo properly and throws an 
+        Exception if the shadow repo doesn't exist
+        '''
+        with self.assertRaises(RuntimeError):
+            git_shadow.delete_shadow_repo(self.repo_dir)
+
+        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=True)
+        git_shadow.delete_shadow_repo(self.repo_dir)
+        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".shadow")))
 
     def test_add_hooks(self):
         # verify hooks are installed in parent repository
@@ -61,4 +93,10 @@ class Test_git_shadow(TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")))
         self.assertEqual(filetext, open(filepath, "rt").read())
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
-        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
+
+     def test_activate(self):
+        subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
+
+        # verify git repo was initialized
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
+       self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
