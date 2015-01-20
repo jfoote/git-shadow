@@ -95,8 +95,30 @@ class Test_git_shadow(TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
 
+    def test_shadow_controlled_files(self):
+        # add some files to test repo
+        test_filepath = os.path.join(self.repo_dir, "foobar")
+        open(test_filepath, "wt").write("some file contents")
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
+
+        os.mkdir(os.path.join(self.repo_dir, "foobaz"))
+        test_filepath = os.path.join(self.repo_dir, "foobaz", "foomanchu")
+        open(test_filepath, "wt").write("some other file contents")
+
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
+        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir)
+        # create shadow
+        git_shadow.create_shadow_repo(self.repo_dir)
+        git_shadow.shadow_controlled_files(self.repo_dir)
+        # verify
+        self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobar")))
+        self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobaz", "foomanchu")))
+
+
+'''
     def test_activate(self):
         subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
 
         # verify git repo was initialized
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
+'''
