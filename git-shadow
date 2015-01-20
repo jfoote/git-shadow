@@ -101,6 +101,7 @@ def add_hooks(cwd):
         if not os.path.exists(filepath):
             with open(filepath, "wt") as fp:
                 fp.write("#!/bin/sh\ngit shadow %s\n" % hook)
+            subprocess.check_call(["chmod", "+x", filepath]) # TODO: POSIX only
         else:
             with open(filepath, "at") as fp:
                 fp.write("\ngit shadow %s\n" % hook)
@@ -131,7 +132,6 @@ def shadow_controlled_files(src_repo_path):
     corresponding shadow repository and commits them
     '''
     src = get_repo_path(src_repo_path)
-    print "SRC", src
     dst = get_shadow_repo_path(src_repo_path)
     rel_fps = subprocess.check_output(["git", "ls-tree", "-r", "HEAD", "--name-only"], cwd=src).strip().splitlines()
     changed = False
@@ -195,7 +195,6 @@ if __name__ == "__main__":
     elif sys.argv[1] == "remove-hooks": 
         remove_hooks(cwd)
     elif sys.argv[1] == "shadow-file":
-        import pickle
         filepath = sys.argv[2]
         buffer_path = sys.argv[3]
         shadow_file(filepath, buffer_path)

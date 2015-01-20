@@ -17,7 +17,7 @@ def num_commits(repo_dir):
     out = subprocess.check_output(["git", "log", "--format=%H"], cwd=repo_dir)
     return len(out.strip().splitlines())
 
-class Test_git_shadow(TestCase):
+class UnitTests(TestCase):
 
     def setUp(self):
         # create dummy repo for testing
@@ -104,14 +104,14 @@ class Test_git_shadow(TestCase):
         # add some files to test repo
         test_filepath = os.path.join(self.repo_dir, "foobar")
         open(test_filepath, "wt").write("some file contents")
-        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
 
         os.mkdir(os.path.join(self.repo_dir, "foobaz"))
         test_filepath = os.path.join(self.repo_dir, "foobaz", "foomanchu")
         open(test_filepath, "wt").write("some other file contents")
 
-        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
-        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir)
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
+        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
         # create shadow
         git_shadow.create_shadow_repo(self.repo_dir)
         git_shadow.shadow_controlled_files(self.repo_dir)
@@ -129,14 +129,14 @@ class Test_git_shadow(TestCase):
         # add some files to a test repo
         test_filepath = os.path.join(self.repo_dir, "foobar")
         open(test_filepath, "wt").write("some file contents")
-        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
 
         os.mkdir(os.path.join(self.repo_dir, "foobaz"))
         test_filepath = os.path.join(self.repo_dir, "foobaz", "foomanchu")
         open(test_filepath, "wt").write("some other file contents")
 
-        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
-        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir)
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
+        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
 
         # create shadow repo
         git_shadow.create_shadow_repo(self.repo_dir)
@@ -145,7 +145,6 @@ class Test_git_shadow(TestCase):
         # baseline number of commits in shadow repo
         shadow_repo_path = git_shadow.get_shadow_repo_path(self.repo_dir)
         commits = num_commits(shadow_repo_path)
-        print "%d commits" % commits
 
         # verify adding an unchanged file doesn't result in a commit to the shadow repo
         git_shadow.shadow_file(test_filepath, test_filepath)
@@ -157,3 +156,46 @@ class Test_git_shadow(TestCase):
             tf.flush()
             git_shadow.shadow_file(test_filepath, tf.name)
             self.assertEqual(commits+1, num_commits(shadow_repo_path))
+
+
+class IntegrationTests(TestCase):
+
+    def setUp(self):
+        # create dummy repo for testing
+        self.repo_dir = os.path.realpath(tempfile.mkdtemp())
+        subprocess.check_call(["git", "init", self.repo_dir])
+
+        # add cwd to path to support execution of "git-shadow" in tests
+        self.env = os.environ
+        self.env["PATH"] = ":".join(self.env["PATH"].split(":") + [os.getcwd()])
+
+    def tearDown(self):
+        rm_r(self.repo_dir)
+
+    def test_shadow_file(self):
+        # add some files to a test repo
+        test_filepath = os.path.join(self.repo_dir, "foobar")
+        open(test_filepath, "wt").write("some file contents")
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
+
+        os.mkdir(os.path.join(self.repo_dir, "foobaz"))
+        test_filepath = os.path.join(self.repo_dir, "foobaz", "foomanchu")
+        open(test_filepath, "wt").write("some other file contents")
+
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
+        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
+
+        # create shadow repo
+        git_shadow.create_shadow_repo(self.repo_dir)
+        git_shadow.shadow_controlled_files(self.repo_dir)
+        git_shadow.add_hooks(self.repo_dir)
+
+        # simulate a modification to a file and a commit
+        open(test_filepath, "wt").write("new contents..\nare here!")
+        git_shadow.shadow_file(test_filepath, test_filepath)
+
+        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
+        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
+
+        # make sure shadow repo was commited
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", "git")))
