@@ -1,25 +1,12 @@
-" Primary functions {{{
-"
-
-let g:shadow_cmd = fnamemodify(resolve(expand('<sfile>:p')), ':h') . "/git_shadow.py"
-
-function! shadow#system(cmd, ...)
-  let output = call('system', [a:cmd] + a:000)
-  if v:shell_error != 0
-      call shadow#disable()
-      throw 'cmd error'
-  endif
-  return output
-endfunction
-
 function! shadow#write_shadow()
-    let l:filepath = expand('%:p')
-    if empty(l:filepath)
-        return
-    endif
-    let l:path = l:filepath . ".shadow." . strftime("%Y-%m-%d_%H:%M:%S") 
-    call writefile(getline(1, '$'), l:path)
-    call shadow#system(g:shadow_cmd . ' ' . l:path) 
+    " Pass filepath and buffer contents to git-shadow
+python << EOF
+import vim, subprocess, pickle
+filepath = vim.current.buffer.name
+if filepath:
+    buf = vim.current.buffer.range(0, len(vim.current.buffer))
+    subprocess.call(["git", "shadow", "shadow-buf", filepath, pickle.dumps(buf[:])])
+EOF
 endfunction
 
 function! shadow#disable()
@@ -29,7 +16,6 @@ function! shadow#disable()
     
     let g:shadow_enabled = 0
 endfunction
-
 
 function! shadow#enable()
     augroup shadow
@@ -51,5 +37,3 @@ function! shadow#enable()
 
     let g:shadow_enabled = 1
 endfunction
-
-" }}}

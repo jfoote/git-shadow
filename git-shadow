@@ -166,6 +166,11 @@ if __name__ == "__main__":
         add_hooks(cwd)
     elif sys.argv[1] == "remove-hooks": 
         remove_hooks(cwd)
+    elif sys.argv[1] == "shadow-buf":
+        import pickle
+        filepath = sys.argv[2]
+        buf = pickle.loads(sys.argv[3])
+        shadow_buffer(filepath, buf)
     else:
         # run git command in mirror directory of shadow repo
         pass
