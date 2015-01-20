@@ -2,7 +2,10 @@
 
 from unittest import TestCase
 import subprocess, os, shutil
-import git_shadow
+
+# Load git-shadow as a module for functional unit tests. Le Hack. Sacrebleu!!1
+import imp
+git_shadow = imp.load_source("git_shadow", os.path.join(os.getcwd(), "git-shadow")) 
 
 def rm_r(path):
     if os.path.isdir(path):
@@ -12,29 +15,27 @@ def rm_r(path):
 
 class Test_git_shadow(TestCase):
     def setUp(self):
+        # create dummy repo for testing
         import tempfile
         self.repo_dir = tempfile.mkdtemp()
         subprocess.check_call(["git", "init", self.repo_dir])
-        shutil.copyfile("git_shadow.py", "git-shadow")
-        subprocess.check_call(["chmod", "+x", "git-shadow"]) # TODO: POSIX only
+
+        # add cwd to path to support execution of "git-shadow" in tests
         self.env = os.environ
         self.env["PATH"] = ":".join(self.env["PATH"].split(":") + [os.getcwd()])
 
     def tearDown(self):
-        os.remove("git-shadow")
         rm_r(self.repo_dir)
 
     def test_activate(self):
-        import sys; print sys.path
         subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
 
         # verify git repo was initialized
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
 
     def test_create_shadow_repo(self):
-        #git_shadow.create_shadow_repo(cwd=cwd, force=True)
+        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=False)
         # TODO: stopped here
-        pass
 
     def test_add_hooks(self):
         # verify hooks are installed in parent repository
