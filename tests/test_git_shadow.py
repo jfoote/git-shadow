@@ -14,9 +14,11 @@ def rm_r(path):
         os.remove(path)
 
 def num_commits(repo_dir):
+    print "num_commits", subprocess.check_output(["git", "log"], cwd=repo_dir)
     out = subprocess.check_output(["git", "log", "--format=%H"], cwd=repo_dir)
     return len(out.strip().splitlines())
 
+"""
 class UnitTests(TestCase):
 
     def setUp(self):
@@ -80,6 +82,13 @@ class UnitTests(TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")))
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".gitignore")))
+
+    def test_add_hooks_merge(self):
+        open(os.path.join(self.repo_dir, ".gitignore"), "wt").write("*.c")
+        subprocess.call(["git", "shadow", "add-hooks", self.repo_dir], env=self.env)
+        self.assertEqual(open(os.path.join(self.repo_dir, ".gitignore"), "rt").read(),
+                "*.c\n.shadow\n")
 
     def test_remove_hooks(self):
         # verify hooks are removed from parent repository
@@ -89,16 +98,25 @@ class UnitTests(TestCase):
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
 
+    def test_remove_hooks_merge(self):
         # verify git-shadow hooks are removed without clobbering existing hook file
         filetext = "foobaz"
         filepath = os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")
         open(filepath, "wt").write(filetext)
+
+        ignoretext = "foobaz"
+        ignorepath = os.path.join(self.repo_dir, ".gitignore")
+        open(ignorepath, "wt").write(ignoretext)
+
         subprocess.call(["git", "shadow", "add-hooks", self.repo_dir], env=self.env)
         subprocess.call(["git", "shadow", "remove-hooks", self.repo_dir], env=self.env)
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")))
         self.assertEqual(filetext, open(filepath, "rt").read())
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
+
+        self.assertEqual(ignoretext, open(ignorepath, "rt").read())
+
 
     def test_shadow_controlled_files(self):
         # add some files to test repo
@@ -119,11 +137,19 @@ class UnitTests(TestCase):
         self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobar")))
         self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobaz", "foomanchu")))
 
+
     def test_activate(self):
         subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
 
+        '''
+        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=False)
+        git_shadow.shadow_controlled_files(self.repo_dir)
+        git_shadow.add_hooks(cwd=self.repo_dir)
+        '''
+
         # verify git repo was initialized
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
+
 
     def test_shadow_file(self):
         # add some files to a test repo
@@ -156,7 +182,7 @@ class UnitTests(TestCase):
             tf.flush()
             git_shadow.shadow_file(test_filepath, tf.name)
             self.assertEqual(commits+1, num_commits(shadow_repo_path))
-
+"""
 
 class IntegrationTests(TestCase):
 
@@ -190,12 +216,29 @@ class IntegrationTests(TestCase):
         git_shadow.shadow_controlled_files(self.repo_dir)
         git_shadow.add_hooks(self.repo_dir)
 
-        # simulate a modification to a file and a commit
-        open(test_filepath, "wt").write("new contents..\nare here!")
-        git_shadow.shadow_file(test_filepath, test_filepath)
+        # simulate two modifications to a file 
+        with tempfile.NamedTemporaryFile() as tf:
+            tf.write("new contents..\nare here!")
+            tf.flush()
+            git_shadow.shadow_file(test_filepath, tf.name)
 
+            tf.write("new contents..\nare here now!")
+            tf.flush()
+            git_shadow.shadow_file(test_filepath, tf.name)
+
+            # simulate a save 
+            shutil.copyfile(tf.name, test_filepath)
+
+        # simulate an add/commit to the enclosing repo
         subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
         subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
 
-        # make sure shadow repo was commited
+        # make sure: new shadow repo was initialized in HEAD, and it is empty: 
+        #  - only a single commit -- all tracked files being added
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
+        self.assertEqual(num_commits(os.path.join(self.repo_dir, ".shadow")), 1)
+
+        # make sure: old shadow repo was committed with last commit 
+        subprocess.check_call(["git", "checkout", "HEAD^"], cwd=self.repo_dir, env=self.env)
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", "git")))
+        self.assertEqual(num_commits(os.path.join(self.repo_dir, ".shadow")), 2)

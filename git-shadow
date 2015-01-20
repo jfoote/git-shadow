@@ -28,9 +28,6 @@ def get_filepath_relative_to_repo(filepath):
     repo_rel_dirpath = subprocess.check_output(["git", "rev-parse", "--show-prefix"], cwd=dirpath).strip()
     return os.path.join(repo_rel_dirpath, filename)
 
-def commit(cwd, message="git-shadow"):
-    subprocess.check_call(["git", "commit", "-m" "'%s'" % message], cwd=cwd)
-
 def get_commit_id(cwd):
     return subprocess.check_output(["git", "log", '--format=%H', "-n", "1"], 
             cwd=cwd).strip()
@@ -55,8 +52,8 @@ def add_shadow_repo(cwd="."):
     shadow_repo_storage_path = os.path.join(".shadow", "git")
     shutil.move(shadow_git_repo_path, shadow_repo_storage_path)
     
-    # git add shadow directory
-    subprocess.check_call(["git", "add", os.path.join(".shadow", "*")], cwd=cwd)
+    # git add storage directory
+    subprocess.check_call(["git", "add", os.path.join(".shadow", "git", "*")], cwd=cwd)
 
 def get_shadow_repo_path(path):
     '''
@@ -66,19 +63,33 @@ def get_shadow_repo_path(path):
 
 def delete_shadow_repo(path):
     '''
-    Deletes shadow repository from toplevel repo containing 'path' (i.e. path 
-    can be a filepath anywhere within the repo)
+    git-rm's shadow repository ('.shadow' and its contents) from toplevel repo 
+    containing 'path' (i.e. path can be a filepath anywhere within the repo)
     '''
     spath = get_shadow_repo_path(path)
-    if not os.path.exists(os.path.join(spath, ".git")): # try to avoid bumblebee
+    # try to avoid bumblebee
+    if not (os.path.exists(os.path.join(spath, ".git")) or \
+            os.path.exists(os.path.join(spath, "git"))): 
         raise RuntimeError("No shadow repo found at '%s'" % get_repo_path(path))
-    subprocess.check_call(["rm", "-rf", spath], cwd=spath)
+    print "delete_shadow_repo: path, spath", path, spath
+    subprocess.check_call(["git", "rm", "-rf", spath], cwd=path)
+
+def restore_shadow_repo(cwd="."):
+    '''
+    Restores the repo from .shadow/git to .shadow/.git.
+    Copies the tree into place, then git-rm's the stored version
+    to make room for any updates.
+    '''
+    stored = os.path.join(".shadow", "git")
+    live = os.path.join(".shadow", ".git")
+    shutil.copytree(stored, live)
+    subprocess.check_call(["git", "rm", "-rf", stored], cwd=cwd)
 
 def create_shadow_repo(cwd=".", force=True):
     '''
     Creates a new shadow repo in the conventional subdir below cwd. If shadow 
     repo dir exists and force is False, the script errors out. Otherwise the
-    old repo is deleted before the new one is created.
+    old repo is git-rm'd before the new one is created.
     Called when shadow is initialized and by hooks (such as post-commit).
     '''
     shadow_repo_path = get_shadow_repo_path(cwd)
@@ -89,6 +100,7 @@ def create_shadow_repo(cwd=".", force=True):
             delete_shadow_repo(cwd)
  
     # make shadow repo
+    print "create_shadow_repo: shadow_repo_path", shadow_repo_path, "cwd", cwd
     subprocess.check_output(["git", "init", shadow_repo_path], cwd=cwd)
 
 def add_hooks(cwd):
@@ -105,6 +117,11 @@ def add_hooks(cwd):
         else:
             with open(filepath, "at") as fp:
                 fp.write("\ngit shadow %s\n" % hook)
+    ignore = os.path.join(get_repo_path(cwd), ".gitignore")
+    if not os.path.exists(ignore):
+        open(ignore, "wt").write("\n.shadow\n")
+    else:
+        open(ignore, "at").write("\n.shadow\n")
 
 def remove_hooks(cwd):
     '''
@@ -120,6 +137,12 @@ def remove_hooks(cwd):
             os.remove(filepath)
         else:
             open(filepath, "wt").write("\n".join(lines))
+    ignore = os.path.join(get_repo_path(cwd), ".gitignore")
+    if open(ignore, "rt").read() == "\n.shadow\n":
+        os.remove(ignore)
+    else:
+        removed = open(ignore, "rt").read().replace("\n.shadow\n", "")
+        open(ignore, "wt").write(removed)
 
 
 '''
@@ -133,9 +156,17 @@ def shadow_controlled_files(src_repo_path):
     '''
     src = get_repo_path(src_repo_path)
     dst = get_shadow_repo_path(src_repo_path)
-    rel_fps = subprocess.check_output(["git", "ls-tree", "-r", "HEAD", "--name-only"], cwd=src).strip().splitlines()
+    try:
+        rel_fps = subprocess.check_output(["git", "ls-tree", "-r", "HEAD", "--name-only"], cwd=src).strip().splitlines()
+    except subprocess.CalledProcessError:
+        # this happens when there are no commits in the repo: fatal: Not a valid object name HEAD
+        return
     changed = False
     for rel_fp in rel_fps:
+        if rel_fp[:len(".shadow")] == ".shadow":
+            # don't shadow the shadow 
+            print "shadow_controlled_files, skipping", rel_fp
+            continue
         dst_filepath = os.path.join(dst, rel_fp)
         dst_dirpath, dst_filename = os.path.split(dst_filepath)
         src_filepath = os.path.join(src, rel_fp)
@@ -150,7 +181,8 @@ def shadow_controlled_files(src_repo_path):
             logging.error("error copying %s to %s, probably uncommitted 'git mv'" % (src_filepath, dst_filepath))
             logging.exception(e)
     if changed:
-        commit(dst, get_commit_id(src))
+        subprocess.check_call(["git", "commit", "-m" "'%s'" % get_commit_id(src)], cwd=dst)
+
 
 def shadow_file(filepath, buffer_path):
     '''
@@ -165,6 +197,7 @@ def shadow_file(filepath, buffer_path):
                 
         shutil.copy(buffer_path, dst)
     
+        print "committing %s to %s" % (dst, shadow_repo)
         subprocess.check_call(["git", "add", rel], cwd=shadow_repo)
         subprocess.check_call(["git", "commit", "-m", "'file_modified'"], cwd=shadow_repo)
 
@@ -179,17 +212,28 @@ if __name__ == "__main__":
         cwd = "."
 
     if sys.argv[1] == "activate":
-        create_shadow_repo(cwd=cwd, force=True)
-        shadow_controlled_files(cwd=cwd)
+        create_shadow_repo(cwd=cwd, force=False)
+        shadow_controlled_files(cwd)
         add_hooks(cwd=cwd)
     elif sys.argv[1] == "deactivate":
         remove_hooks(cwd=cwd)
         delete_shadow_repo(cwd)
     elif sys.argv[1] in ["pre-commit"]:
+        print "PRE-COMMIT CALLED FOR", os.path.abspath(cwd)
+        remove_hooks(cwd=cwd)
         add_shadow_repo(cwd=cwd)
-    elif sys.argv[1] in ["post-commit", "pre-checkout"]:
-        create_shadow_repo(cwd=cwd, force=False)
-        shadow_controlled_files(cwd=cwd)
+        add_hooks(cwd=cwd)
+    elif sys.argv[1] in ["post-commit"]:
+        print "POST-COMMIT CALLED FOR", os.path.abspath(cwd)
+        remove_hooks(cwd=cwd)
+        create_shadow_repo(cwd=cwd, force=True)
+        shadow_controlled_files(cwd)
+        add_hooks(cwd=cwd)
+    elif sys.argv[1] in ["post-checkout"]: # TODO: this is not a thing, using .gitignore instead
+        print "POST-CHECKOUT CALLED FOR", os.path.abspath(cwd)
+        remove_hooks(cwd=cwd)
+        restore_shadow_repo(cwd=cwd)
+        add_hooks(cwd=cwd)
     elif sys.argv[1] == "add-hooks":
         add_hooks(cwd)
     elif sys.argv[1] == "remove-hooks": 
@@ -201,3 +245,11 @@ if __name__ == "__main__":
     else:
         # run git command in mirror directory of shadow repo
         pass
+
+"""
+TODO:
+    1. store shadow to a zip file (or other single file) so that it doesn't clutter up git ls-tree, etc.
+    2. figure out why .shadow/git still exists after a commit
+    3. fix post-checkout logic
+    4. cleanup
+"""
