@@ -93,10 +93,10 @@ class Test_git_shadow(TestCase):
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")))
         self.assertEqual(filetext, open(filepath, "rt").read())
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
+        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
 
-     def test_activate(self):
+    def test_activate(self):
         subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
 
         # verify git repo was initialized
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
-       self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
