@@ -137,7 +137,8 @@ class Test_git_shadow(TestCase):
 
         subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir)
         subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir)
-        # create shadow
+
+        # create shadow repo
         git_shadow.create_shadow_repo(self.repo_dir)
         git_shadow.shadow_controlled_files(self.repo_dir)
 
@@ -150,7 +151,7 @@ class Test_git_shadow(TestCase):
         git_shadow.shadow_file(test_filepath, test_filepath)
         self.assertEqual(commits, num_commits(shadow_repo_path))
 
-        # verify adding a changed file *does* result in a commit
+        # verify adding a changed file *does* result in a commit to the shadow repo
         with tempfile.NamedTemporaryFile() as tf:
             tf.write("new contents..\nare here!")
             tf.flush()
