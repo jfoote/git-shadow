@@ -126,11 +126,21 @@ def is_active(cwd):
     except subprocess.CalledProcessError:
         return False
 
+def assert_git(cwd):
+    try:
+        get_repo_path(cwd)
+    except subprocess.CalledProcessError:
+        sys.stderr.write("not in a git repo: '%s'\n" % cwd)
+        sys.exit(-1)
+
 def activate(cwd):
     create_current(cwd)
     add_hooks(cwd)
 
 def deactivate(cwd):
+    if not is_active(cwd):
+        sys.stderr.write("not active: '%s'\n" % cwd)
+        sys.exit(-1)
     remove_hooks(cwd)
     rm_r(get_current_path(cwd))
 
@@ -202,35 +212,38 @@ def shadow_file(filepath, buffer_path):
     subprocess.check_call(["git", "commit", "-m", "'file_modified'"], 
             cwd=current, stdout=devnull, stderr=devnull)
 
+def pass_git_command(args, cwd):
+    '''
+    Runs git shell command corresponding to 'args' in shadow/.current
+    '''
+    if not is_active(cwd):
+        sys.stderr.write("git-shadow is not active for '%s'" % cwd)
+        sys.exit(-1)
+    cmd = "git " + " " .join(args)
+    subprocess.call(cmd, shell=True, cwd=get_current_path(cwd))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         sys.stderr.write("not enough args")
         sys.exit(-1)
 
-    if len(sys.argv) > 2:
-        cwd = sys.argv[2]
-    else:
-        cwd = "."
-
-    if sys.argv[1] == "activate":
-        activate(cwd=cwd)
-    elif sys.argv[1] == "deactivate":
-        deactivate(cwd=cwd)
-    elif sys.argv[1] in ["post-commit"]:
-        commit_shadow(cwd)
-    elif sys.argv[1] in ["post-checkout"]: 
-        checkout_shadow(cwd)
-    elif sys.argv[1] == "shadow-file":
+    if sys.argv[1] == "shadow-file":
         filepath = sys.argv[2]
         buffer_path = sys.argv[3]
         shadow_file(filepath, buffer_path)
-    else: # analyze
-        # run git command in mirror directory of shadow repo
-        # 0. if .shadow/current doesn't exist, bail with message
-        # 1. cd to .shadow/current
-        # 2. run command
-        pass
+    else:
+        cwd = os.getcwd()
+        assert_git(cwd)
+        if sys.argv[1] == "activate":
+            activate(cwd=cwd)
+        elif sys.argv[1] == "deactivate":
+            deactivate(cwd=cwd)
+        elif sys.argv[1] == "post-commit":
+            commit_shadow(cwd)
+        elif sys.argv[1] == "post-checkout": 
+            checkout_shadow(cwd)
+        else: 
+            pass_git_command(sys.argv[1:], cwd)
 
 """
 TODO:
