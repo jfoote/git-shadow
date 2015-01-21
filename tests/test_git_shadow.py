@@ -69,9 +69,8 @@ class UnitTests(TestCase):
         git_shadow.create_current(cwd=self.repo_dir)
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
             ".shadow", "current", ".git")))
-        git_shadow.create_current(cwd=self.repo_dir)
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
-            ".shadow", "current", ".git")))
+        with self.assertRaises(OSError):
+            git_shadow.create_current(cwd=self.repo_dir)
 
     def test_create_current_shadow(self):
         '''
@@ -129,6 +128,17 @@ class UnitTests(TestCase):
         self.assertEqual(filetext, open(filepath, "rt").read())
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-checkout")))
 
+    def test_activate(self):
+        git_shadow.activate(self.repo_dir)
+        path = os.path.join(self.repo_dir, ".shadow", "current")
+        self.assertTrue(os.path.exists(path))
+        self.assertTrue(git_shadow.is_active(self.repo_dir))
+
+        git_shadow.deactivate(self.repo_dir)
+        path = os.path.join(self.repo_dir, ".shadow", "current")
+        self.assertFalse(os.path.exists(path))
+        self.assertFalse(git_shadow.is_active(self.repo_dir))
+
     def test_shadow_controlled_files_moves(self):
         '''
         Verify the function shadows controlled files when git mv, rm are used
@@ -167,6 +177,7 @@ class UnitTests(TestCase):
         subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
         subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
 
+        git_shadow.activate(self.repo_dir)
 
         # verify adding an unchanged file results in creation of .shadow/current, 
         # but doesn't make an additional commit

@@ -10,27 +10,36 @@ import subprocess, re, sys, os, json, difflib, shutil, filecmp
 Git utility functions
 '''
 
+devnull = open(os.devnull, 'w')
+
+def rm_r(path):
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    elif os.path.exists(path):
+        os.remove(path)
+
 def get_repo_path(path):
     if not os.path.isdir(path):
         path = os.path.dirname(path)
     return subprocess.check_output(["git", "rev-parse", "--show-toplevel"], 
-            cwd=path).strip()
+            cwd=path, stderr=devnull).strip()
 
 def get_branch(path):
     if not os.path.isdir(path):
         path = os.path.dirname(path)
-    text = subprocess.check_output(["git", "branch"], cwd=path)
+    text = subprocess.check_output(["git", "branch"], cwd=path, stderr=devnull)
     line = [l for l in text.splitlines() if "*" in l][0]
     return line.strip("* ")
 
 def get_filepath_relative_to_repo(filepath):
     dirpath, filename = os.path.split(filepath)
-    repo_rel_dirpath = subprocess.check_output(["git", "rev-parse", "--show-prefix"], cwd=dirpath).strip()
+    repo_rel_dirpath = subprocess.check_output(["git", "rev-parse", 
+        "--show-prefix"], cwd=dirpath, stderr=devnull).strip()
     return os.path.join(repo_rel_dirpath, filename)
 
 def get_commit_id(cwd):
     return subprocess.check_output(["git", "log", '--format=%H', "-n", "1"], 
-            cwd=cwd).strip()
+            cwd=cwd, stderr=devnull).strip()
 
 
 '''
@@ -51,11 +60,8 @@ def create_current(cwd="."):
     Creates a <repo>/.shadow/current and adds in controlled files to it. 
     '''
     path = get_current_path(cwd)
-    if os.path.exists(path):
-        print("dir already exists: %s" % path) 
-        return
     os.makedirs(path)
-    subprocess.check_output(["git", "init", path], cwd=cwd)
+    subprocess.check_output(["git", "init", path], cwd=cwd, stderr=devnull)
     shadow_controlled_files(get_repo_path(cwd), path)
 
 def add_hooks(cwd):
@@ -96,10 +102,10 @@ def shadow_controlled_files(src, dst):
     Adds and commits all controlled files from repo at src to repo at dst. 
     '''
     try:
-        rel_fps = subprocess.check_output(["git", "ls-tree", "-r", "HEAD", "--name-only"], cwd=src).strip().splitlines()
+        rel_fps = subprocess.check_output(["git", "ls-tree", "-r", "HEAD", 
+            "--name-only"], cwd=src, stderr=devnull).strip().splitlines()
     except subprocess.CalledProcessError:
         # this happens when there are no commits in the repo: fatal: Not a valid object name HEAD
-        print "no HEAD"
         return
     changed = False
     for rel_fp in rel_fps:
@@ -110,34 +116,49 @@ def shadow_controlled_files(src, dst):
             if not os.path.exists(dst_dirpath):
                 subprocess.check_call(["mkdir", "-p", dst_dirpath], cwd=src)
             shutil.copy(src_filepath, dst_filepath)
-            subprocess.check_call(["git", "add", dst_filepath], cwd=dst)
+            subprocess.check_call(["git", "add", dst_filepath], cwd=dst, 
+                    stderr=devnull)
             changed = True
         except Exception as e:
             import logging
             logging.error("error copying %s to %s, probably uncommitted 'git mv'" % (src_filepath, dst_filepath))
             logging.exception(e)
     if changed:
-        subprocess.check_call(["git", "commit", "-m" "'%s'" % get_commit_id(src)], cwd=dst)
+        subprocess.check_call(["git", "commit", "-m", 
+            "'%s'" % get_commit_id(src)], cwd=dst, stdout=devnull,
+            stderr=devnull)
+
+def in_shadow_dir(filepath):
+    rel = get_filepath_relative_to_repo(filepath)
+    if os.path.split(rel)[0] == ".shadow":
+        return True
+    return False
 
 def shadow_file(filepath, buffer_path):
     '''
-    Diffs contents (respectively) of filepath and buffer_path; if the buffer
-    contents are different, the file corresponding to filepath is copied from
-    the enclosing repo to the shadow repo and added/committed to the shadow 
-    repo.
-    The shadow repo is created if it does not exist.
+    Adds/commits contents of buffer_path to .shadow/current at path
+    corresponding to filepath if contents are new.
+    Note that filepath may correspond to a file that doesn't exist on disk
+    yet (like a named buffer in the editor). 
     '''
-    create_current(os.path.dirname(filepath))
-    if not filecmp.cmp(filepath, buffer_path, shallow=False):
-        current = get_current_path(filepath)
-        rel = get_filepath_relative_to_repo(filepath)
-        dst = os.path.join(current, rel)
-                
-        shutil.copy(buffer_path, dst)
-    
-        print "committing %s to %s" % (dst, current)
-        subprocess.check_call(["git", "add", rel], cwd=current)
-        subprocess.check_call(["git", "commit", "-m", "'file_modified'"], cwd=current)
+    if not is_active(filepath):
+        return
+    if in_shadow_dir(filepath):
+        return
+
+    current = get_current_path(filepath)
+    rel = get_filepath_relative_to_repo(filepath)
+    shadow = os.path.join(current, rel)
+
+    # If the shadow file exists and matches the buffer, bail
+    if os.path.exists(shadow) and \
+            filecmp.cmp(shadow, buffer_path, shallow=False):
+        return
+
+    shutil.copy(buffer_path, shadow)
+    subprocess.check_call(["git", "add", rel], cwd=current, stderr=devnull)
+    subprocess.check_call(["git", "commit", "-m", "'file_modified'"], 
+            cwd=current, stdout=devnull, stderr=devnull)
 
 def checkout_shadow(cwd):
     # 1. copy .shadow/<commit id> to .shadow/current; this is a "read" operation on the shadow
@@ -147,13 +168,35 @@ def checkout_shadow(cwd):
         raise RuntimeError("repo for commit already exists at %s" % path) 
     shutil.move(get_current_path(cwd), path)
 
+def get_commit_path(cwd):
+    return os.path.join(get_shadow_path(cwd), get_commit_id(cwd))
+
 def commit_shadow(cwd):
-    # 1. move .shadow/current to .shadow/<commit id>; this is a "write" operation on the shadow
-    #    - .shadow/<commit id> should not exist, as re-writes of commits aren't usually done with an editor !
+    '''
+    Moves .shadow/current to .shadow/<commit id> and creates a new shadow
+    Note that shadow/<commit id> should not exist, as re-writes of commits 
+    aren't usually done with an editor 
+    '''
+    # 2. Create a new .shadow/current
     path = get_commit_path(cwd)
     if os.path.exists(path):
         raise RuntimeError("repo for commit already exists at %s" % path) 
     shutil.move(get_current_path(cwd), path)
+    create_current(cwd)
+
+def is_active(cwd):
+    try:
+        return os.path.exists(get_current_path(cwd))
+    except subprocess.CalledProcessError:
+        return False
+
+def activate(cwd):
+    create_current(cwd)
+    add_hooks(cwd)
+
+def deactivate(cwd):
+    remove_hooks(cwd)
+    rm_r(get_current_path(cwd))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
@@ -166,16 +209,14 @@ if __name__ == "__main__":
         cwd = "."
 
     if sys.argv[1] == "activate":
-        add_hooks(cwd=cwd)
+        activate(cwd=cwd)
     elif sys.argv[1] == "deactivate":
-        remove_hooks(cwd=cwd)
+        deactivate(cwd=cwd)
     elif sys.argv[1] in ["post-commit"]:
         commit_shadow(cwd)
     elif sys.argv[1] in ["post-checkout"]: 
         checkout_shadow(cwd)
     elif sys.argv[1] == "shadow-file":
-        # 1. create repo .shadow/current if it doesn't exist
-        # 1. if different, add the file to .shadow/current/<path> and commit it to .shadow/current
         filepath = sys.argv[2]
         buffer_path = sys.argv[3]
         shadow_file(filepath, buffer_path)
@@ -188,14 +229,6 @@ if __name__ == "__main__":
 
 """
 TODO:
-    0. BEST*** store repos in .shadow/<commit_id> and *don't* commit them with the repo (make a special repo for .shadow/.current)
-       - solves all this git hackery
-       - does not cause shadow to be in git repo; *completely* transparent
-    1. store shadow to a zip file (or other single file) so that it doesn't clutter up git ls-tree, etc. Do it like this for now, to avoid complexity:
-        - .shadow/history.zip # always in parent repo (after first commit)
-        - .shadow/live/.git, etc. # always added to .gitinore 
-    2. figure out why .shadow/git still exists after a commit
-    3. fix post-checkout logic
-    4. cleanup
-    5. Advertise no support for history re-writing: re-ordering may work, but squashing/splitting and filter-branch probably won't
+    1. cleanup
+    2. Advertise no support for history re-writing: re-ordering may work, but squashing/splitting and filter-branch probably won't
 """
