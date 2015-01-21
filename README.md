@@ -30,7 +30,7 @@ When `git shadow activate` is invoked, a mirror of all files that are tracked in
 
 As you code in vim, the `vim-shadow` plugin periodically passes the contents of the active buffer to an incantation of the `git-shadow` command, which adds them to a shadow git repository inside the `.shadow` directory.
 
-As commits are made to your codebase, `git-shadow` catalogues git repositories containing your coding activity in the `.shadow` directory by commit id. `.shadow` contains a directory for each commit id that `git-shadow` has been active for, including `current`. 
+As commits are made to your codebase, `git-shadow` catalogues git repositories containing your coding activity in the `.shadow` directory by commit id. The `.shadow` directory contains a directory for each commit id that `git-shadow` has been active for, including `current`. 
 
 Running `git shadow <git cmd>` simply runs the corresponding git command as if it were invoked from in `.shadow/current`.
 
