@@ -22,7 +22,7 @@ git-shadow transparently records coding activity between commits in near-real-ti
 
 1. Checkout an interesting commit (ex: where a bug was introduced)
 
-2. Run access the shadow repository via `git shadow <git command>`
+2. Run git analysis the shadow repository via `git shadow <git command>`, or access the repo directly at `<repo>/.shadow/current`
 
 ## How it works
 
