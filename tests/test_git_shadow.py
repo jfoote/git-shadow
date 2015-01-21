@@ -18,7 +18,6 @@ def num_commits(repo_dir):
     out = subprocess.check_output(["git", "log", "--format=%H"], cwd=repo_dir)
     return len(out.strip().splitlines())
 
-"""
 class UnitTests(TestCase):
 
     def setUp(self):
@@ -27,129 +26,133 @@ class UnitTests(TestCase):
         subprocess.check_call(["git", "init", self.repo_dir])
 
         # add cwd to path to support execution of "git-shadow" in tests
+        os.environ["PATH"] = ":".join(os.environ["PATH"].split(":") + [os.getcwd()])
         self.env = os.environ
-        self.env["PATH"] = ":".join(self.env["PATH"].split(":") + [os.getcwd()])
 
     def tearDown(self):
         rm_r(self.repo_dir)
 
-    def test_get_shadow_repo_path(self):
+    def test_get_shadow_path(self):
         '''
         Verify the shadow repo path is constructed properly and that an 
         Exception is raised if the func is called outside a git repo.
         '''
-        p = git_shadow.get_shadow_repo_path(self.repo_dir)
-
-        self.assertEqual(git_shadow.get_shadow_repo_path(self.repo_dir),
-                os.path.join(self.repo_dir, ".shadow"))
+        p = git_shadow.get_shadow_path(self.repo_dir)
+        self.assertEqual(p, os.path.join(self.repo_dir, ".shadow"))
 
         tdir = tempfile.mkdtemp()
         try:
             with self.assertRaises(subprocess.CalledProcessError):
-                git_shadow.get_shadow_repo_path(tdir)
+                git_shadow.get_shadow_path(tdir)
         finally:
             rm_r(tdir)
 
-    def test_create_shadow_repo(self):
+    def test_get_current_path(self):
         '''
-        Verify the function creates repos properly and throws an Exception if
-        the repo already exists/force is False
+        Verify the urrent repo path is constructed properly and that an 
+        Exception is raised if the func is called outside a git repo.
         '''
-        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=False)
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow")))
+        p = git_shadow.get_current_path(self.repo_dir)
+        self.assertEqual(p, os.path.join(self.repo_dir, ".shadow", "current"))
 
-        with self.assertRaises(RuntimeError):
-            git_shadow.create_shadow_repo(cwd=self.repo_dir, force=False)
+        tdir = tempfile.mkdtemp()
+        try:
+            with self.assertRaises(subprocess.CalledProcessError):
+                git_shadow.get_current_path(tdir)
+        finally:
+            rm_r(tdir)
 
-        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=True)
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow")))
-
-    def test_delete_shadow_repo(self):
+    def test_create_current(self):
         '''
-        Verify the function deletes a shadow repo properly and throws an 
-        Exception if the shadow repo doesn't exist
+        Verify the function creates/overwrites repos properly 
         '''
-        with self.assertRaises(RuntimeError):
-            git_shadow.delete_shadow_repo(self.repo_dir)
+        git_shadow.create_current(cwd=self.repo_dir)
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
+            ".shadow", "current", ".git")))
+        git_shadow.create_current(cwd=self.repo_dir)
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
+            ".shadow", "current", ".git")))
 
-        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=True)
-        git_shadow.delete_shadow_repo(self.repo_dir)
-        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".shadow")))
+    def test_create_current_shadow(self):
+        '''
+        Verify the function shadows controlled files
+        '''
+        fp_a = os.path.join(self.repo_dir, "a")
+        open(fp_a, "wt").write("test_a")
+
+        dir_b = os.path.join(self.repo_dir, "db")
+        os.mkdir(dir_b)
+        fp_b = os.path.join(dir_b, "b")
+        open(fp_b, "wt").write("test_b")
+
+        subprocess.call(["git", "add", fp_a, fp_b], cwd=self.repo_dir)
+        subprocess.call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir)
+ 
+        git_shadow.create_current(cwd=self.repo_dir)
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
+            ".shadow", "current", fp_a)))
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
+            ".shadow", "current", fp_b)))
+
 
     def test_add_hooks(self):
         # verify hooks are installed in parent repository
+        git_shadow.add_hooks(self.repo_dir)
         subprocess.call(["git", "shadow", "add-hooks", self.repo_dir], env=self.env)
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")))
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".gitignore")))
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-checkout")))
 
     def test_add_hooks_merge(self):
-        open(os.path.join(self.repo_dir, ".gitignore"), "wt").write("*.c")
-        subprocess.call(["git", "shadow", "add-hooks", self.repo_dir], env=self.env)
-        self.assertEqual(open(os.path.join(self.repo_dir, ".gitignore"), "rt").read(),
-                "*.c\n.shadow\n")
+        hook_path = os.path.join(self.repo_dir, ".git", "hooks", "post-commit")
+        open(hook_path, "wt").write("echo test")
+        git_shadow.add_hooks(self.repo_dir)
+        self.assertEqual(open(hook_path, "rt").read(), 
+            "echo test\ngit shadow post-commit\n")
 
     def test_remove_hooks(self):
         # verify hooks are removed from parent repository
-        subprocess.call(["git", "shadow", "add-hooks", self.repo_dir], env=self.env)
-        subprocess.call(["git", "shadow", "remove-hooks", self.repo_dir], env=self.env)
-        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")))
+        git_shadow.add_hooks(self.repo_dir)
+        git_shadow.remove_hooks(self.repo_dir)
         self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
-        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
+        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-checkout")))
 
     def test_remove_hooks_merge(self):
         # verify git-shadow hooks are removed without clobbering existing hook file
         filetext = "foobaz"
-        filepath = os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")
+        filepath = os.path.join(self.repo_dir, ".git", "hooks", "post-commit")
         open(filepath, "wt").write(filetext)
 
-        ignoretext = "foobaz"
-        ignorepath = os.path.join(self.repo_dir, ".gitignore")
-        open(ignorepath, "wt").write(ignoretext)
+        git_shadow.add_hooks(self.repo_dir)
+        git_shadow.remove_hooks(self.repo_dir)
 
-        subprocess.call(["git", "shadow", "add-hooks", self.repo_dir], env=self.env)
-        subprocess.call(["git", "shadow", "remove-hooks", self.repo_dir], env=self.env)
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-commit")))
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
         self.assertEqual(filetext, open(filepath, "rt").read())
-        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-commit")))
-        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "pre-checkout")))
+        self.assertFalse(os.path.exists(os.path.join(self.repo_dir, ".git", "hooks", "post-checkout")))
 
-        self.assertEqual(ignoretext, open(ignorepath, "rt").read())
-
-
-    def test_shadow_controlled_files(self):
-        # add some files to test repo
-        test_filepath = os.path.join(self.repo_dir, "foobar")
-        open(test_filepath, "wt").write("some file contents")
-        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
-
-        os.mkdir(os.path.join(self.repo_dir, "foobaz"))
-        test_filepath = os.path.join(self.repo_dir, "foobaz", "foomanchu")
-        open(test_filepath, "wt").write("some other file contents")
-
-        subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
-        subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
-        # create shadow
-        git_shadow.create_shadow_repo(self.repo_dir)
-        git_shadow.shadow_controlled_files(self.repo_dir)
-        # verify
-        self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobar")))
-        self.assertTrue(os.path.exists(os.path.join(git_shadow.get_shadow_repo_path(self.repo_dir), "foobaz", "foomanchu")))
-
-
-    def test_activate(self):
-        subprocess.call(["git", "shadow", "activate", self.repo_dir], env=self.env)
-
+    def test_shadow_controlled_files_moves(self):
         '''
-        git_shadow.create_shadow_repo(cwd=self.repo_dir, force=False)
-        git_shadow.shadow_controlled_files(self.repo_dir)
-        git_shadow.add_hooks(cwd=self.repo_dir)
+        Verify the function shadows controlled files when git mv, rm are used
         '''
+        '''
+        TODO
+        fp_a = os.path.join(self.repo_dir, "a")
+        open(fp_a, "wt").write("test_a")
 
-        # verify git repo was initialized
-        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", ".git")))
+        dir_b = os.path.join(self.repo_dir, "db")
+        os.mkdir(dir_b)
+        fp_b = os.path.join(dir_b, "b")
+        open(fp_b, "wt").write("test_b")
 
+        subprocess.call(["git", "add", fp_a, fp_b], cwd=self.repo_dir)
+        subprocess.call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir)
+ 
+        git_shadow.create_current(cwd=self.repo_dir)
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
+            ".shadow", "current", fp_a)))
+        self.assertTrue(os.path.exists(os.path.join(self.repo_dir, 
+            ".shadow", "current", fp_b)))
+        '''
+        pass
 
     def test_shadow_file(self):
         # add some files to a test repo
@@ -164,24 +167,21 @@ class UnitTests(TestCase):
         subprocess.check_call(["git", "add", test_filepath], cwd=self.repo_dir, env=self.env)
         subprocess.check_call(["git", "commit", "-m", "'message'"], cwd=self.repo_dir, env=self.env)
 
-        # create shadow repo
-        git_shadow.create_shadow_repo(self.repo_dir)
-        git_shadow.shadow_controlled_files(self.repo_dir)
 
-        # baseline number of commits in shadow repo
-        shadow_repo_path = git_shadow.get_shadow_repo_path(self.repo_dir)
-        commits = num_commits(shadow_repo_path)
-
-        # verify adding an unchanged file doesn't result in a commit to the shadow repo
+        # verify adding an unchanged file results in creation of .shadow/current, 
+        # but doesn't make an additional commit
+        shadow_repo_path = git_shadow.get_current_path(self.repo_dir)
+        print "self.repo_dir", self.repo_dir
         git_shadow.shadow_file(test_filepath, test_filepath)
-        self.assertEqual(commits, num_commits(shadow_repo_path))
+        self.assertEqual(1, num_commits(shadow_repo_path))
 
         # verify adding a changed file *does* result in a commit to the shadow repo
         with tempfile.NamedTemporaryFile() as tf:
             tf.write("new contents..\nare here!")
             tf.flush()
             git_shadow.shadow_file(test_filepath, tf.name)
-            self.assertEqual(commits+1, num_commits(shadow_repo_path))
+            self.assertEqual(2, num_commits(shadow_repo_path))
+
 """
 
 class IntegrationTests(TestCase):
@@ -242,3 +242,4 @@ class IntegrationTests(TestCase):
         subprocess.check_call(["git", "checkout", "HEAD^"], cwd=self.repo_dir, env=self.env)
         self.assertTrue(os.path.exists(os.path.join(self.repo_dir, ".shadow", "git")))
         self.assertEqual(num_commits(os.path.join(self.repo_dir, ".shadow")), 2)
+"""
