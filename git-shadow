@@ -163,10 +163,11 @@ def shadow_file(filepath, buffer_path):
 def checkout_shadow(cwd):
     # 1. copy .shadow/<commit id> to .shadow/current; this is a "read" operation on the shadow
     #    - if the user has abandoned changes to .shadow/current, it will be necessary to delete it first
-    path = get_commit_path(cwd)
-    if os.path.exists(path):
-        raise RuntimeError("repo for commit already exists at %s" % path) 
-    shutil.move(get_current_path(cwd), path)
+    current = get_current_path(cwd)
+    if os.path.exists(current):
+        rm_r(current)
+    commit = get_commit_path(cwd)
+    shutil.copytree(commit, current)
 
 def get_commit_path(cwd):
     return os.path.join(get_shadow_path(cwd), get_commit_id(cwd))
