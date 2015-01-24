@@ -219,13 +219,7 @@ def pass_git_command(args, cwd):
     if not is_active(cwd):
         sys.stderr.write("git-shadow is not active for '%s'" % cwd)
         sys.exit(-1)
-    cmd = "git"
-    for a in args:
-        if " " in a:
-            cmd += ' "%s"' % a
-        else:
-            cmd += ' %s' % a
-    subprocess.call(cmd, shell=True, cwd=get_current_path(cwd))
+    subprocess.call(["git"] + args, cwd=get_current_path(cwd))
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
