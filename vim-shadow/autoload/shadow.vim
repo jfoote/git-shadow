@@ -1,14 +1,17 @@
 function! shadow#write_shadow()
     " Pass filepath and buffer contents to git-shadow
 python << EOF
-import vim, subprocess, tempfile
+import vim, subprocess, tempfile, os
 filepath = vim.current.buffer.name
 if filepath:
     buf = vim.current.buffer.range(1, len(vim.current.buffer))
     with tempfile.NamedTemporaryFile() as tf:
         tf.write("\n".join([l for l in buf]))
         tf.flush()
-        subprocess.call(["git", "shadow", "shadow-file", filepath, tf.name])
+        try:
+            subprocess.call(["git", "shadow", "shadow-file", filepath, tf.name], stderr=open(os.devnull, "w"))
+        except CalledProcessError:
+            pass
 EOF
 endfunction
 
