@@ -244,9 +244,3 @@ if __name__ == "__main__":
             checkout_shadow(cwd)
         else: 
             pass_git_command(sys.argv[1:], cwd)
-
-"""
-TODO:
-    1. cleanup
-    2. Advertise no support for history re-writing: re-ordering may work, but squashing/splitting and filter-branch probably won't
-"""
