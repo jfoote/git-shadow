@@ -6,7 +6,7 @@ git-shadow transparently records coding activity between commits in near-real-ti
 
 1. A silly bug is found in your code during a code review, or worse...
 
-![goto fail](https://foote.pub/images/goto-fail.png)
+![goto fail](http://foote.pub/images/goto-fail.png)
 
 2. Find commit for bug using conventional weapons
 
@@ -53,7 +53,7 @@ The oldest shadow commit discovered above, `38013a4...` is the verbatim shadow c
 
 4. Query big brother to do a root cause analysis
 
-![tweet](https://foote.pub/images/goto-fail-tweet.png)
+![tweet](http://foote.pub/images/goto-fail-tweet.png)
 
 5. Change your coding habits to avoid making the same mistake again
 
