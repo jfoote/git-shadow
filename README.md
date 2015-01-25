@@ -58,11 +58,11 @@ $ git shadow log -S 'goto fail'
 
 # Fictional Example
 
-A silly bug is found in your code during a code review, or worse...
+Say a silly bug is found in my code during an internal code review, or worse...
 
 ![goto fail](http://foote.pub/images/goto-fail.png)
 
-... and you decide to do some root-cause analysis with the help of `git-shadow`
+... and I decide to do some root-cause analysis with the help of `git-shadow`
 
 ### 1. Find the commit where the bug was injected using conventional weapons
 
@@ -81,7 +81,7 @@ Date:   Fri June 11 14:00:55 2003 -0500
     Initial commit
 ```
 
-We can see from the above pickaxe search that the only commits that added or removed a `goto fail` were the initial commit and commit `7dba55f...` made by this shady `Jonathan Foote` character.
+I can see from the above pickaxe search that the only commits that added or removed a `goto fail` were the initial commit and commit `7dba55f...` made by this shady `Jonathan Foote` character.
 
 ### 2. Find exact minute/second you made the mistake using `git-shadow`
 
@@ -111,7 +111,11 @@ The oldest shadow commit discovered above, `38013a4...` is the verbatim shadow c
 
 ![tweet](http://foote.pub/images/goto-fail-tweet.png)
 
-5. Change your coding habits to avoid making the same mistake again
+Oh. Yeah. Probably shouldn't have done any programming that Friday night.
+
+### 4. I change my habits to avoid making the same mistake again. 
+
+I use `git-shadow` to continuously improve my programming skills, becoming to envy of all my friends. Then so many dollars come at me.
 
 **Gratuitous Disclaimer**: I had nothing to do with the real `goto fail;` bug, I've never worked for Apple, and I have no idea how the bug was actually introduced. IOW, relax, it's just an example.
 
