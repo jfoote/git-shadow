@@ -4,14 +4,21 @@ git-shadow transparently records coding activity between commits in near-real-ti
 
 # Installation (vim)
 
+Clone the git repo
+
 ```
-# Clone the git repo
 $ git clone https://github.com/jfoote/git-shadow
+```
 
-# Put `git-shadow` on your path
+Put `git-shadow` on your path
+
+```
 $ pushd git-shadow && ln -s `pwd`/git-shadow /usr/local/bin/git-shadow && popd
+```
 
-# Configure vim to autoload `vim-shadow`
+Configure vim to autoload `vim-shadow`
+
+```
 $ pushd git-shadow && ln -s `pwd`/vim-shadow ~/.vim/bundle
 ```
 
@@ -57,7 +64,7 @@ A silly bug is found in your code during a code review, or worse...
 
 ... and you decide to do some root-cause analysis with the help of `git-shadow`
 
-2. Find the commit where the bug was injected using conventional weapons
+### 1. Find the commit where the bug was injected using conventional weapons
 
 ```
 foote$ git log -S 'goto fail'
@@ -76,7 +83,7 @@ Date:   Fri June 11 14:00:55 2003 -0500
 
 We can see from the above pickaxe search that the only commits that added or removed a `goto fail` were the initial commit and commit `7dba55f...` made by this shady `Jonathan Foote` character.
 
-3. Find exact minute/second you made the mistake using `git-shadow`
+### 2. Find exact minute/second you made the mistake using `git-shadow`
 
 ```
 $ git checkout 7dba55fb8590f043afe935a9b366814fa5727804
@@ -100,7 +107,7 @@ Date:   Thu Jan 19 14:12:00 2014 -0500
 
 The oldest shadow commit discovered above, `38013a4...` is the verbatim shadow copy of the code created when I first started working on the `PR59241`. According to pickaxe, the only other shadow commit to modify `goto fail` was `69136d4...` made at `Fri Jan 20 23:12:54 2014 -0500`. Looks like I was coding late at night when I made the mistake...
 
-4. Query your big data to do a root cause analysis
+### 3. Query your big data to do a root cause analysis
 
 ![tweet](http://foote.pub/images/goto-fail-tweet.png)
 
