@@ -111,7 +111,7 @@ Date:   Thu Jan 19 14:12:00 2014 -0500
 
 The oldest shadow commit discovered above, `38013a4...` is the verbatim shadow copy of the code created when I first started working on the `PR59241`. According to pickaxe, the only other shadow commit to modify `goto fail` was `69136d4...` made at `Fri Jan 20 23:12:54 2014 -0500`. Looks like I was coding late at night when I made the mistake...
 
-### 3. Query your big data to do a root cause analysis
+### 3. Query your big data using the fault injection time to do a root cause analysis
 
 ![tweet](http://foote.pub/images/goto-fail-tweet.png)
 
