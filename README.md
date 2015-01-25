@@ -151,3 +151,8 @@ Running `git shadow <git cmd>` simply runs the corresponding git command as if i
 
 I've got plans to beat on this, but I haven't done it yet. This script is simply a proof of concept. There is no support for history re-writing (and probably a lot of other `git` use cases). Re-ordering may work, but squashing/splitting, filter-branch, etc. almost certainly will not. 
 
+```
+Jonathan Foote
+jmfoote@loyola.edu
+24 Jan 2014
+```
