@@ -125,6 +125,8 @@ I use `git-shadow` to continuously improve my programming skills, becoming to en
 
 When `git shadow activate` is invoked, a mirror of all files that are tracked in the current repo is created in `<repo path>/.shadow`. Hooks are added to the current repo to keep the shadow consistent with HEAD. 
 
+All of the shadow logic is implemented in a single python script (`git-shadow`). The example editor plugin is implemented in two simple vimscript files (`vim-shadow/autoload/shadow.vim` and `vim-shadow/plugin/shadow.vim`).
+
 ## Coding
 
 As you code in vim, the `vim-shadow` plugin periodically passes the contents of the active buffer to the `git-shadow shadow-file` command, which adds them to a shadow git repository inside the `.shadow` directory. Note that while this proof-of-concept uses vim, any editor that can be coerced into running `git-shadow` when buffer contents change could be used.
