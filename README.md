@@ -66,7 +66,7 @@ Say a silly bug is found in my code during an internal code review, or worse...
 
 ... and I decide to do some root-cause analysis with the help of `git-shadow`
 
-**Gratuitous Disclaimer**: I had nothing to do with the real `goto fail;` bug, I've never worked for Apple, and I have no idea how the bug was actually introduced. IOW, relax, it's just an example.
+**Gratuitous Disclaimer**: I had nothing to do with the real `goto fail;` bug, I've never worked for Apple, and I have no idea how the bug was actually introduced. IOW, it's just an example.
 
 ### 1. Find the commit where the bug was injected using conventional methods 
 
