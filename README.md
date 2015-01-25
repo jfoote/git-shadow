@@ -2,7 +2,9 @@
 
 git-shadow transparently records coding activity between commits in near-real-time. Recorded activity is stored into per-commit git repositories that can be analyzed with existing git workflows.
 
-# Installation (vim)
+# Usage (vim)
+
+### Installation 
 
 Clone the git repo
 
@@ -22,7 +24,7 @@ Configure vim to autoload `vim-shadow`
 $ pushd git-shadow && ln -s `pwd`/vim-shadow ~/.vim/bundle
 ```
 
-# Usage (vim)
+### Coding 
 
 Change directories to a git repo
 
@@ -42,7 +44,7 @@ Code with vim
 $ vim main.c
 ```
 
-## Analysis
+### Analysis
 
 Checkout an interesting commit (ex: where a bug was introduced)
 
