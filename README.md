@@ -117,9 +117,12 @@ The oldest shadow commit discovered above, `38013a4...` is the verbatim shadow c
 
 Oh. Yeah. Probably shouldn't have done any programming that Friday night.
 
+Drunk tweets aside, querying something like [fluxtream](https://fluxtream.org/) could provide some novel insight.
+
 ### 4. I change my habits to avoid making the same mistake again. 
 
 I use `git-shadow` to continuously improve my programming skills, becoming to envy of all my friends. After a few years of flawless programming, I retire as a rich philantropist.
+
 
 # How it works
 
@@ -145,7 +148,7 @@ The hook simply calls an incantation of `git-shadow` -- all of the hook logic is
 
 ## Analysis
 
-Running `git shadow <git cmd>` simply runs the corresponding git command as if it were invoked from in `.shadow/current`.
+Running `git shadow <git cmd>` simply runs the corresponding git command as if it were invoked from `.shadow/current`.
 
 ![flow2](http://foote.pub/images/shadow2.png)
 
