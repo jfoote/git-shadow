@@ -117,7 +117,7 @@ The oldest shadow commit discovered above, `38013a4...` is the verbatim shadow c
 
 Oh. Yeah. Probably shouldn't have done any programming that Friday night.
 
-Drunk tweets aside, querying something like [fluxtream](https://fluxtream.org/) could provide some novel insight.
+Note: Drunk tweets notwithstanding, querying something like [fluxtream](https://fluxtream.org/) could provide some novel insight.
 
 ### 4. I change my habits to avoid making the same mistake again. 
 
