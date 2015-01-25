@@ -1,5 +1,9 @@
 scriptencoding utf-8
 
+" Jonathan Foote
+" jmfoote@loyola.edu
+" Copyright 2015, see LICENSE.txt for details
+"
 if exists('g:loaded_shadow') || !executable('git') || !has('signs') || &cp
   finish
 endif

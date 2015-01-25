@@ -1,3 +1,7 @@
+" Jonathan Foote
+" jmfoote@loyola.edu
+" Copyright 2015, see LICENSE.txt for details
+
 function! shadow#write_shadow()
     " Pass filepath and buffer contents to git-shadow
 python << EOF
