@@ -66,7 +66,9 @@ Say a silly bug is found in my code during an internal code review, or worse...
 
 ... and I decide to do some root-cause analysis with the help of `git-shadow`
 
-### 1. Find the commit where the bug was injected using conventional weapons
+**Gratuitous Disclaimer**: I had nothing to do with the real `goto fail;` bug, I've never worked for Apple, and I have no idea how the bug was actually introduced. IOW, relax, it's just an example.
+
+### 1. Find the commit where the bug was injected using conventional methods 
 
 ```
 foote$ git log -S 'goto fail'
@@ -119,8 +121,6 @@ Oh. Yeah. Probably shouldn't have done any programming that Friday night.
 
 I use `git-shadow` to continuously improve my programming skills, becoming to envy of all my friends. Then so many dollars come at me.
 
-**Gratuitous Disclaimer**: I had nothing to do with the real `goto fail;` bug, I've never worked for Apple, and I have no idea how the bug was actually introduced. IOW, relax, it's just an example.
-
 # How it works
 
 When `git shadow activate` is invoked, a mirror of all files that are tracked in the current repo is created in `<repo path>/.shadow`. Hooks are added to the current repo to keep the shadow consistent with HEAD. 
@@ -135,7 +135,7 @@ As commits are made to your codebase, `git-shadow` catalogues git repositories c
 
 ## HEAD changes
 
-When the user runs a `checkout` command, a hook placed in `.git/hooks` when the user ran the `git shadow activate` command dumps the existing `.shadow/current` and replaces it with the directory corresponding to the new `HEAD` if it exists.
+When the user runs a `checkout` command, a hook placed in `.git/hooks` when the user ran the `git shadow activate` command deletes the existing `.shadow/current` and replaces it with the directory corresponding to the new `HEAD` if it exists.
 
 ![flow3](http://foote.pub/images/shadow3.png)
 
@@ -149,5 +149,5 @@ Running `git shadow <git cmd>` simply runs the corresponding git command as if i
 
 # Warnings
 
-I haven't used this for a project (yet) -- this is simply a proof of concept. There is no support for history re-writing (and probably a lot of other cases). Re-ordering may work, but squashing/splitting, filter-branch, etc. almost certainly will not. 
+I've got plans to beat on this, but I haven't done it yet. This script is simply a proof of concept. There is no support for history re-writing (and probably a lot of other `git` use cases). Re-ordering may work, but squashing/splitting, filter-branch, etc. almost certainly will not. 
 
