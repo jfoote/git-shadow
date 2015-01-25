@@ -17,19 +17,19 @@ $ pushd git-shadow && ln -s `pwd`/vim-shadow ~/.vim/bundle
 
 # Usage (vim)
 
-1. Change directories to a git repo
+Change directories to a git repo
 
 ```
 $ cd demo
 ```
 
-2. Run `git shadow activate`
+Run `git shadow activate`
 
 ```
 $ git shadow activate
 ```
 
-3. Code with vim
+Code with vim
 
 ```
 $ vim main.c
@@ -37,13 +37,13 @@ $ vim main.c
 
 ## Analysis
 
-1. Checkout an interesting commit (ex: where a bug was introduced)
+Checkout an interesting commit (ex: where a bug was introduced)
 
 ```
 $ git checkout 7dba55fb8590f043afe935a9b366814fa5727804
 ```
 
-2. Run git analysis the shadow repository via `git shadow <git command>`, or access the repo directly at `<repo>/.shadow/current`
+Run git analysis the shadow repository via `git shadow <git command>`, or access the repo directly at `<repo>/.shadow/current`
 
 ```
 $ git shadow log -S 'goto fail'
