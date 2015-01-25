@@ -123,12 +123,29 @@ I use `git-shadow` to continuously improve my programming skills, becoming to en
 
 When `git shadow activate` is invoked, a mirror of all files that are tracked in the current repo is created in `<repo path>/.shadow`. Hooks are added to the current repo to keep the shadow consistent with HEAD. 
 
+## Coding
+
 As you code in vim, the `vim-shadow` plugin periodically passes the contents of the active buffer to the `git-shadow shadow-file` command, which adds them to a shadow git repository inside the `.shadow` directory. Note that while this proof-of-concept uses vim, any editor that can be coerced into running `git-shadow` when buffer contents change could be used.
+
+![flow1](http://foote.pub/images/shadow1.png)
 
 As commits are made to your codebase, `git-shadow` catalogues git repositories containing your coding activity in the `.shadow` directory by commit id. The `.shadow` directory contains a directory for each commit id that `git-shadow` has been active for, including `current`. 
 
+## HEAD changes
+
+When the user runs a `checkout` command, a hook placed in `.git/hooks` when the user ran the `git shadow activate` command dumps the existing `.shadow/current` and replaces it with the directory corresponding to the new `HEAD` if it exists.
+
+![flow3](http://foote.pub/images/shadow3.png)
+
+The hook simply calls an incantation of `git-shadow` -- all of the hook logic is contained in the `git-shadow` script. *Note: This logic probably needs some work.*
+
+## Analysis
+
 Running `git shadow <git cmd>` simply runs the corresponding git command as if it were invoked from in `.shadow/current`.
+
+![flow2](http://foote.pub/images/shadow2.png)
 
 # Warnings
 
-This is a proof of concept. There is no support for history re-writing (and probably a lot of other cases I haven't got to yet). Re-ordering may work, but squashing/splitting, filter-branch, etc. almost certainly will not. 
+I haven't used this for a project (yet) -- this is simply a proof of concept. There is no support for history re-writing (and probably a lot of other cases). Re-ordering may work, but squashing/splitting, filter-branch, etc. almost certainly will not. 
+
