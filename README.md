@@ -7,7 +7,7 @@ git-shadow transparently records coding activity between commits in near-real-ti
 Code shadowing could potentially help answer a bunch of questions that I (and perhaps others) think are interesting about the future of coding:
 
 - Can applying [churn](http://research.microsoft.com/apps/pubs/default.aspx?id=69126), [ownership](http://www.cabird.com/papers/bird2011dtm.pdf), and [other fault prediction](http://2015.msrconf.org/history.php) techniques to real-time coding data help programmers make fewer mistakes?
-- Can the big data major internet services collect be used to help us understand why we make mistakes in code? 
+- Can the big data that major internet services collect be used to help us understand why we make mistakes in code? 
 - Can [emerging research](http://research.microsoft.com/pubs/209878/biometricSensors_Submitted-07-03-14.pdf) in using *quantified-self* data to understand the coding process be applied in the real world? 
 - Do I actually *code* in a different way than the rockstars (Knuth, Linus, et al.)? What about programmers I really admire (Beazley, et. al.)? How is my process different, and how can I get better?
 
