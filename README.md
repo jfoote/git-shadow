@@ -2,13 +2,62 @@
 
 git-shadow transparently records coding activity between commits in near-real-time. Recorded activity is stored into per-commit git repositories that can be analyzed with existing git workflows.
 
-# Example: Determining *exactly* when you injected a silly bug in your code
+# Installation (vim)
 
-1. A silly bug is found in your code during a code review, or worse...
+```
+# Clone the git repo
+$ git clone https://github.com/jfoote/git-shadow
+
+# Put `git-shadow` on your path
+$ pushd git-shadow && ln -s `pwd`/git-shadow /usr/local/bin/git-shadow && popd
+
+# Configure vim to autoload `vim-shadow`
+$ pushd git-shadow && ln -s `pwd`/vim-shadow ~/.vim/bundle
+```
+
+# Usage (vim)
+
+1. Change directories to a git repo
+
+```
+$ cd demo
+```
+
+2. Run `git shadow activate`
+
+```
+$ git shadow activate
+```
+
+3. Code with vim
+
+```
+$ vim main.c
+```
+
+## Analysis
+
+1. Checkout an interesting commit (ex: where a bug was introduced)
+
+```
+$ git checkout 7dba55fb8590f043afe935a9b366814fa5727804
+```
+
+2. Run git analysis the shadow repository via `git shadow <git command>`, or access the repo directly at `<repo>/.shadow/current`
+
+```
+$ git shadow log -S 'goto fail'
+```
+
+# Fictional Example
+
+A silly bug is found in your code during a code review, or worse...
 
 ![goto fail](http://foote.pub/images/goto-fail.png)
 
-2. Find commit for bug using conventional weapons
+... and you decide to do some root-cause analysis with the help of `git-shadow`
+
+2. Find the commit where the bug was injected using conventional weapons
 
 ```
 foote$ git log -S 'goto fail'
@@ -51,35 +100,13 @@ Date:   Thu Jan 19 14:12:00 2014 -0500
 
 The oldest shadow commit discovered above, `38013a4...` is the verbatim shadow copy of the code created when I first started working on the `PR59241`. According to pickaxe, the only other shadow commit to modify `goto fail` was `69136d4...` made at `Fri Jan 20 23:12:54 2014 -0500`. Looks like I was coding late at night when I made the mistake...
 
-4. Query big brother to do a root cause analysis
+4. Query your big data to do a root cause analysis
 
 ![tweet](http://foote.pub/images/goto-fail-tweet.png)
 
 5. Change your coding habits to avoid making the same mistake again
 
-**Disclaimer**: I had nothing to do with the real `goto fail;` bug, I've never worked for Apple, and I have no idea how the bug was actually introduced. IOW, relax, it's just an example.
-
-# Installation (vim)
-
-1. Clone the git repo
-
-2. Put `git-shadow` on your path
-
-3. Configure vim to autoload `vim-shadow`
-
-# Usage (vim)
-
-1. Change directories to a git repo
-
-2. Run `git shadow activate`
-
-3. Code with vim
-
-## Analysis
-
-1. Checkout an interesting commit (ex: where a bug was introduced)
-
-2. Run git analysis the shadow repository via `git shadow <git command>`, or access the repo directly at `<repo>/.shadow/current`
+**Gratuitous Disclaimer**: I had nothing to do with the real `goto fail;` bug, I've never worked for Apple, and I have no idea how the bug was actually introduced. IOW, relax, it's just an example.
 
 # How it works
 
