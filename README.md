@@ -119,7 +119,7 @@ Oh. Yeah. Probably shouldn't have done any programming that Friday night.
 
 ### 4. I change my habits to avoid making the same mistake again. 
 
-I use `git-shadow` to continuously improve my programming skills, becoming to envy of all my friends. Then so many dollars come at me.
+I use `git-shadow` to continuously improve my programming skills, becoming to envy of all my friends. After a few years of flawless programming, I retire as a rich philantropist.
 
 # How it works
 
