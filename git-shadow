@@ -2,6 +2,7 @@
 # 
 # Jonathan Foote
 # jmfoote@loyola.edu
+# 2014-01-24
 
 import subprocess, re, sys, os, json, difflib, shutil, filecmp
 
@@ -89,7 +90,9 @@ def remove_hooks(cwd):
         if open(filepath, "rt").read() == ("#!/bin/sh\ngit shadow %s\n" % hook):
             os.remove(filepath)
         else:
-            lines = [l.strip() for l in open(filepath, "rt").readlines() if l.strip() != "git shadow %s" % hook]
+            lines = [l.strip() for l in \
+                    open(filepath, "rt").readlines() \
+                    if l.strip() != "git shadow %s" % hook]
             open(filepath, "wt").write("\n".join(lines))
 
 def checkout_shadow(cwd):
@@ -113,7 +116,6 @@ def commit_shadow(cwd):
     Note that shadow/<commit id> should not exist, as re-writes of commits 
     aren't usually done with an editor 
     '''
-    # 2. Create a new .shadow/current
     path = get_commit_path(cwd)
     if os.path.exists(path):
         raise RuntimeError("repo for commit already exists at %s" % path) 
@@ -157,7 +159,8 @@ def shadow_controlled_files(src, dst):
         rel_fps = subprocess.check_output(["git", "ls-tree", "-r", "HEAD", 
             "--name-only"], cwd=src, stderr=devnull).strip().splitlines()
     except subprocess.CalledProcessError:
-        # this happens when there are no commits in the repo: fatal: Not a valid object name HEAD
+        # this happens when there are no commits in the repo: 
+        # fatal: Not a valid object name HEAD
         return
     changed = False
     for rel_fp in rel_fps:
@@ -173,7 +176,8 @@ def shadow_controlled_files(src, dst):
             changed = True
         except Exception as e:
             import logging
-            logging.error("error copying %s to %s, probably uncommitted 'git mv'" % (src_filepath, dst_filepath))
+            logging.error("error copying %s to %s, probably uncommitted "
+                "'git mv'" % (src_filepath, dst_filepath))
             logging.exception(e)
     if changed:
         subprocess.check_call(["git", "commit", "-m", 
