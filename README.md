@@ -9,7 +9,7 @@ Recording the coding process could potentially help answer a bunch of questions 
 - Can applying [churn](http://research.microsoft.com/apps/pubs/default.aspx?id=69126), [ownership](http://www.cabird.com/papers/bird2011dtm.pdf), and [other fault prediction](http://2015.msrconf.org/history.php) techniques to real-time coding data help programmers make fewer mistakes?
 - Can the big data that major internet services collect be used to help us understand why we make mistakes in code? 
 - Can [emerging research](http://research.microsoft.com/pubs/209878/biometricSensors_Submitted-07-03-14.pdf) in using *quantified-self* data to understand the coding process be applied in the real world? 
-- Do I actually *code* in a different way than the rockstars (Knuth, Linus, et al.)? What about programmers I really admire? How is my process different, and how can I get better?
+- Do I actually write code in a different way than the rockstars (Knuth, Linus, et al.)? What about programmers I really admire? How is my process different, and how can I get better?
 - How does the coding process of someone who is an expert in a language or framework differ from that of someone who is just learning it?
 
 Transparently logging live-coding activity could help answer these and similar questions. `git-shadow` is a simple tool that aims to perform this type of logging and enable developers to start analyzing coding data using tools and methods that have already been built around `git`. 
