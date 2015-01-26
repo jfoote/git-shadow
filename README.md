@@ -145,7 +145,9 @@ All of the shadow logic is implemented in a single python script (`git-shadow`).
 
 ## Coding
 
-As you code in vim, the `vim-shadow` plugin periodically passes the contents of the active buffer to the `git-shadow shadow-file` command, which adds them to a shadow git repository inside the `.shadow` directory. Note that while this proof-of-concept uses vim, any editor that can be coerced into running `git-shadow` when buffer contents change could be used.
+As you code in vim, the `vim-shadow` plugin periodically passes the contents of the active buffer to the `git-shadow shadow-file` command, which adds them to a shadow git repository inside the `.shadow` directory. 
+
+Note that while this proof-of-concept uses vim, any editor that can be coerced into running `git-shadow` when buffer contents change could be used. Editors that support [operational transformation](http://en.wikipedia.org/wiki/Operational_transformation) like [firepad.io](http://www.firepad.io/#1) and [nitrous.io](https://www.nitrous.io/) probably already have events in place that could be used to [record near-real-time coding](http://features.jsomers.net/how-i-reverse-engineered-google-docs/), for example.
 
 ![flow1](http://foote.pub/images/shadow1.png)
 
