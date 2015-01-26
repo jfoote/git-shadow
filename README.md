@@ -4,7 +4,7 @@ git-shadow transparently records coding activity between commits in near-real-ti
 
 ### ... but why?
 
-Recording the coding process could potentially help answer a bunch of questions that I (and perhaps others) think are interesting about the future of coding:
+Recording the coding process could potentially help answer a bunch of questions that I (and perhaps others) think are interesting about development:
 
 - Can applying [churn](http://research.microsoft.com/apps/pubs/default.aspx?id=69126), [ownership](http://www.cabird.com/papers/bird2011dtm.pdf), and [other fault prediction](http://2015.msrconf.org/history.php) techniques to real-time coding data help programmers make fewer mistakes?
 - Can the big data that major internet services collect be used to help us understand why we make mistakes in code? 
