@@ -2,6 +2,8 @@
 
 git-shadow transparently records coding activity between commits in near-real-time. Recorded activity is stored into per-commit git repositories that can be analyzed with existing git workflows.
 
+TODO: put one of these gifs here: https://github.com/KeyboardFire/mkcast
+
 ### ... but why?
 
 Recording the coding process could potentially help answer a bunch of questions that I (and perhaps others) think are interesting about development:

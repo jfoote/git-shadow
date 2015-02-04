@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# 
+#
 # Jonathan Foote
 # jmfoote@loyola.edu
 # 2014-01-24
@@ -211,8 +211,11 @@ def shadow_file(filepath, buffer_path):
             filecmp.cmp(shadow, buffer_path, shallow=False):
         return
 
+    shadow_dir = os.path.dirname(shadow)
+    if not os.path.exists(shadow_dir):
+        os.makedirs(shadow_dir)
     shutil.copy(buffer_path, shadow)
-    subprocess.check_call(["git", "add", rel], cwd=current, stderr=devnull)
+    subprocess.check_call(["git", "add", "-f", rel], cwd=current, stderr=devnull)
     subprocess.check_call(["git", "commit", "-m", "'file_modified'"], 
             cwd=current, stdout=devnull, stderr=devnull)
 
